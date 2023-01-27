@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roof Size Calculator</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.6.3.slim.js" integrity="sha256-DKU1CmJ8kBuEwumaLuh9Tl/6ZB6jzGOBV/5YpNE2BWc=" crossorigin="anonymous"></script>
+    <style>
+        .bottomfocus:focus {
+            box-shadow: 0 4px 2px -2px greenyellow;
+            outline: 0 none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="col-12 vh-100 col-md-8 mx-auto p-4">
+
+
+        <div class="d-flex flex-column h-100  align-content-center justify-content-center">
+            <input type="text" id="landing-input" inputmode="search" class="w-100 bottomfocus border-0 border-bottom border-secondary p-2 fs-4 align-self-center" placeholder="Enter Your Search Location">
+
+            <div id="results-screen" class="d-none flex-grow-1 p-2 shadow-sm my-3">
+                <div id="measurements-box" class="bg-success p-3 text-white d-none">
+                    <div id="measurements">
+
+                    </div>
+                    <button class="btn btn-secondary" onclick="return clearLines()">Start Over</button>
+                </div>
+                <div id="map" class="h-100 w-100">
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDznV3CE01u-1vWLScb1UpSi2-9GCP0i6c&callback=initMap&v=weekly&libraries=drawing,places" defer></script>
+    <script>
+        //Add events listener on page load
+        document.addEventListener("DOMContentLoaded", function() {
+            let input = document.getElementById("landing-input")
+            input.addEventListener("keypress", function(event) {
+                // If the user presses the "Enter" key on the keyboard
+
+                if (event.key === "Enter") {
+                    showMap()
+                }
+            });
+
+            var autocomplete = new google.maps.places.Autocomplete((document.getElementById('landing-input')), {
+                types: ['address'],
+                componentRestrictions: {
+                    country: "USA"
+                }
+            });
+
+            google.maps.event.addListener(autocomplete, 'place_changed', function() {
+                var near_place = autocomplete.getPlace();
+                var coordinates = null;
+                if (near_place.geometry) {
+
+                    coordinates = {
+                        lat: near_place.geometry.location.lat(),
+                        lng: near_place.geometry.location.lng()
+                    }
+                }
+                showMap(coordinates)
+                console.log("Place", near_place)
+            });
+
+        })
+
+
+        /**
+         * Render map. Display map if hidden
+         */
+        function showMap(coordinates = null) {
+
+            if ($("#results-screen").hasClass("d-none")) {
+
+                $("#landing-input").removeClass("bottomfocus border-0 border-bottom border-secondary")
+                $("#landing-input").addClass("rounded")
+                $("#results-screen").toggleClass("d-none")
+            }
+            initMap(coordinates)
+
+        }
+
+        /**
+         * Add comma separation of final value
+         */
+        function formartNumber(number) {
+            return number.toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+
+        /**
+         * Initialize map and render drawing chart
+         */
+        function initMap(coordinates = null) {
+            const map = new google.maps.Map(document.getElementById("map"), {
+                zoom: 17,
+                center: coordinates ?? {
+                    lat: 24.886,
+                    lng: -70.268
+                },
+                mapTypeId: "satellite",
+            });
+
+            var iconBase = 'https://maps.google.com/mapfiles/kml/shapes/';
+            if (coordinates != null) {
+
+
+
+                new google.maps.Marker({
+                    position: coordinates,
+                    label: "Main Roof",
+                    icon: iconBase + 'info-i_maps.png',
+                    map,
+                });
+            }
+
+
+            /**
+             * Setup drawing canvas
+             */
+            const drawingManager = new google.maps.drawing.DrawingManager({
+                drawingMode: google.maps.drawing.OverlayType.POLYGON,
+                drawingControl: true,
+                drawingControlOptions: {
+                    position: google.maps.ControlPosition.TOP_CENTER,
+                    drawingModes: [
+                        google.maps.drawing.OverlayType.POLYLINE,
+                        google.maps.drawing.OverlayType.POLYGON,
+                    ],
+                },
+                markerOptions: {
+                    icon: "https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png",
+                },
+                polygonOptions: {
+                    fillColor: "#ffff00",
+                    borderColor: "#ffff00",
+                    fillOpacity: 0.6,
+                    strokeWeight: 2,
+                    editable: true,
+                    zIndex: 1,
+                },
+
+            });
+
+            drawingManager.setMap(map);
+
+
+            /**
+             * Event listener to calculate area
+             */
+            google.maps.event.addListener(drawingManager, 'polygoncomplete', (polygon) => {
+                const polyPath = polygon.getPath()
+                const measurement = google.maps.geometry.spherical.computeArea(polyPath)
+                const squareMeters = measurement.toFixed(2)
+                const squareCm = formartNumber((squareMeters / 0.0001).toFixed(2))
+
+                drawingManager.setDrawingMode(null)
+                polygon.setOptions({
+                    zIndex: 1
+                })
+                var measurementBox = $("#measurements-box")
+                var measurementContainer = $("#measurements")
+
+                if (measurementBox.hasClass("d-none")) {
+                    measurementBox.removeClass("d-none")
+                }
+
+                measurementContainer.html(`<p>Area ${squareCm} square centimeters.</p>`);
+
+            })
+
+
+        }
+
+
+        window.initMap = initMap;
+
+        /**
+         * Restart page search all over
+         */
+        function clearLines() {
+            window.location.reload();
+        }
+    </script>
+</body>
+
+</html>
