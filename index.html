@@ -71,7 +71,6 @@
                     }
                 }
                 showMap(coordinates)
-                console.log("Place", near_place)
             });
 
         })
@@ -163,30 +162,48 @@
             google.maps.event.addListener(drawingManager, 'polygoncomplete', (polygon) => {
                 const polyPath = polygon.getPath()
                 const measurement = google.maps.geometry.spherical.computeArea(polyPath)
-                const squareMeters = measurement.toFixed(2)
-                const squareCm = formartNumber((squareMeters / 0.0001).toFixed(2))
+                const squareCm = formartNumber(((measurement.toFixed(2)) / 0.0001).toFixed(2));
 
+                google.maps.event.addListener(polyPath, 'insert_at', function(index, obj) {
+                        const measurement = google.maps.geometry.spherical.computeArea(polyPath)
+                        const squareCm = formartNumber(((measurement.toFixed(2)) / 0.0001).toFixed(2));
+                        messageBox(squareCm);
+
+                });
+                google.maps.event.addListener(polyPath, 'set_at', function(index, obj) {
+                        const measurement = google.maps.geometry.spherical.computeArea(polyPath)
+                        const squareCm = formartNumber(((measurement.toFixed(2)) / 0.0001).toFixed(2));
+                        messageBox(squareCm);
+                });
                 drawingManager.setDrawingMode(null)
                 polygon.setOptions({
                     zIndex: 1
                 })
-                var measurementBox = $("#measurements-box")
-                var measurementContainer = $("#measurements")
 
-                if (measurementBox.hasClass("d-none")) {
-                    measurementBox.removeClass("d-none")
-                }
+                messageBox(squareCm);
 
-                measurementContainer.html(`<p>Area ${squareCm} square centimeters.</p>`);
 
             })
 
-
+         
         }
 
 
         window.initMap = initMap;
 
+        /**
+        *Display the area on screen
+        */
+        function messageBox(squareCm){
+            var measurementBox = $("#measurements-box")
+            var measurementContainer = $("#measurements")
+
+            if (measurementBox.hasClass("d-none")) {
+                measurementBox.removeClass("d-none")
+            }
+
+            measurementContainer.html(`<p>Area ${squareCm} square centimeters.</p>`);
+        }
         /**
          * Restart page search all over
          */
